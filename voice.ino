@@ -1,20 +1,22 @@
 #include <Audio.h>
-#include "voice.h"
+#include "osc.h"
 
 
-voice voice;
+osc osc;
 AudioOutputI2S out;
 AudioControlSGTL5000 audioShield;
-AudioConnection patchCord0(voice,0,out,0);
-AudioConnection patchCord1(voice,0,out,1);
+AudioConnection patchCord0(osc,0,out,0);
+AudioConnection patchCord1(osc,0,out,1);
 
 
 void OnNoteOn(byte channel, byte note, byte velocity){
-     voice.setParamValue("Gate",1);
+     osc.setParamValue("Gate",1);
+     osc.setParamValue("key_2_hz", note);
+     Serial.print(note);
 
 }
 void OnNoteOff(byte channel, byte note, byte velocity) {
-       voice.setParamValue("Gate",0);
+       osc.setParamValue("Gate",0);
 
 }
 
@@ -29,4 +31,5 @@ void setup() {
 
 void loop() {
   usbMIDI.read();
+
   }
