@@ -1,14 +1,26 @@
 import("stdfaust.lib");
+import("osc.lib");
 declare options "[midi:on]";
 
-key_2_hz = ba.midikey2hz(f);
+freq = hslider("freq",100,1,20000,1);
+selector = hslider("wave",0,0,2,1);
 
-amp = button("Gate");
-f = hslider("freq", 69, 0, 128, 1);
-s = nentry("[06]Waveform Select [style: knob]",0,0,2,1);
-oscillator = os.polyblep_saw(key_2_hz),
-             os.polyblep_square(key_2_hz),
-             os.polyblep_triangle(key_2_hz) : 
-             select3(s);
+osc_g(i,x) = vgroup("OSC %2nn", x)
+with{
+ nn = i+1;
+};
+voice1 = par(i,2,osc_g(i,voice(freq,selector)*voice_amp));
 
-process =  oscillator*amp;
+envelope = en.adsr(voice_attack,voice_decay,voice_sustain,voice_release,gate);
+voice_attack = hslider("attack",0,0,10,0.1);
+voice_decay = hslider("decay",0.01,0.01,10,0.01);
+voice_sustain = hslider("sustain",0,0,1,0.1);
+voice_release = hslider("release",0,0,10,0.1);
+voice_volume = hslider("volume",0,0,1,0.01);
+voice_amp = envelope * voice_volume;
+gate = button("[07]gate");
+
+filter_freq = hslider("filter",0,0,1,0.01);
+q = hslider("q",0,0,15,0.01);
+voice2 = voice1:>_*voice_amp;
+process = voice2:ve.korg35LPF(filter_freq,q);

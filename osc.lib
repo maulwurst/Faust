@@ -1,0 +1,45 @@
+import("stdfaust.lib");
+declare name"osc";
+declare options "[midi:on]";
+
+ma = library("maths.lib");
+ba = library("basics.lib");
+fi = library("filters.lib");
+si = library("signals.lib");
+pl = library("platform.lib");
+
+
+phasor_imp(freq, reset, phase) = (select2(hard_reset, +(freq/ma.SR), phase) : ma.decimal) ~ _
+with {
+    hard_reset = (1-1')|reset; // To correctly start at `phase` at the first sample
+};
+phasor(tablesize, freq) = phasor_table(tablesize, freq, 0, 0);
+phasor_table(tablesize, freq, reset, phase) = phasor_imp(freq, reset, phase) : *(float(tablesize));
+reset = reset_freq;
+
+polyblep(Q, phase) = (0, L(phase / Q), R((phase - 1) / Q)) : select3(sel)
+with {
+    sel = (phase < Q) + 2*(phase > 1 - Q);
+    L(x) = 2*x - x*x - 1; // Used near the left end of the interval
+    R(x) = 2*x + x*x + 1; // Used near the right end of the interval
+};
+ polyblep_saw(freq) = naive - polyblep(Q , phase)
+with {
+    phase = phasor(1, freq);
+    naive = 2 * phase - 1;
+    Q = freq / ma.SR;
+};
+polyblep_square(freq) = naive - polyblep(Q, phase) + polyblep(Q, ma.modulo(phase + 0.5, 1))
+with {
+    phase = phasor(1, freq);
+    naive = 2 * (phase * 2 : int) - 1;
+    Q = freq / ma.SR;
+};
+polyblep_triangle(freq) = polyblep_square(freq) : fi.pole(0.999) : *(4 * freq / ma.SR);
+
+
+i = hslider("resetfreq",0,0,200000,1);
+
+voice(freq,type) = select3((type) ,polyblep_saw(freq), polyblep_square(freq), polyblep_triangle(freq)) with {
+  
+};
